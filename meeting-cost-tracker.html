@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Cost Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+        }
+        .cost-display {
+            font-size: 6rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            text-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+            transition: all 0.1s ease;
+        }
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center">
+    
+    <div class="w-full max-w-2xl px-8">
+        
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-3xl font-bold text-emerald-400">Meeting Cost Tracker</h1>
+        </div>
+
+        <!-- Input Area -->
+        <div class="grid grid-cols-2 gap-6 mb-16">
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">人數 (Participants)</label>
+                <input 
+                    type="number" 
+                    id="participants" 
+                    value="3" 
+                    min="1"
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-lg focus:outline-none focus:border-emerald-500"
+                >
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">平均時薪 (Avg. Hourly Rate)</label>
+                <input 
+                    type="number" 
+                    id="hourlyRate" 
+                    value="1000" 
+                    min="0"
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-lg focus:outline-none focus:border-emerald-500"
+                >
+            </div>
+        </div>
+
+        <!-- Display Area -->
+        <div class="text-center mb-16">
+            <div class="cost-display text-emerald-400 mb-4" id="costDisplay">$0.00</div>
+            <div class="text-2xl text-gray-500" id="timeDisplay">00:00:00</div>
+        </div>
+
+        <!-- Action Area -->
+        <div class="flex items-center justify-center gap-4">
+            <button 
+                id="startStopBtn"
+                class="px-12 py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-xl font-bold rounded-lg transition-all transform hover:scale-105"
+            >
+                Start
+            </button>
+            <button 
+                id="resetBtn"
+                class="px-6 py-4 bg-slate-700 hover:bg-slate-600 text-white text-xl rounded-lg transition-all"
+            >
+                Reset
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // 狀態變數
+        let isRunning = false;
+        let totalSeconds = 0;
+        let intervalId = null;
+        let updateIntervalId = null;
+
+        // DOM 元素
+        const startStopBtn = document.getElementById('startStopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const costDisplay = document.getElementById('costDisplay');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const participantsInput = document.getElementById('participants');
+        const hourlyRateInput = document.getElementById('hourlyRate');
+
+        // 格式化金額（加入千分位）
+        function formatCurrency(amount) {
+            return '$' + amount.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // 格式化時間
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // 計算當前成本
+        function calculateCost() {
+            const participants = parseInt(participantsInput.value) || 0;
+            const hourlyRate = parseFloat(hourlyRateInput.value) || 0;
+            const costPerSecond = (participants * hourlyRate) / 3600;
+            return totalSeconds * costPerSecond;
+        }
+
+        // 更新顯示
+        function updateDisplay() {
+            const cost = calculateCost();
+            costDisplay.textContent = formatCurrency(cost);
+            timeDisplay.textContent = formatTime(totalSeconds);
+        }
+
+        // 開始/停止按鈕
+        startStopBtn.addEventListener('click', () => {
+            if (!isRunning) {
+                // 開始計時
+                isRunning = true;
+                startStopBtn.textContent = 'Stop';
+                startStopBtn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+                startStopBtn.classList.add('bg-red-500', 'hover:bg-red-600', 'pulse-animation');
+                
+                // 每秒增加計時
+                intervalId = setInterval(() => {
+                    totalSeconds++;
+                }, 1000);
+
+                // 每 0.1 秒更新顯示（營造跳動效果）
+                updateIntervalId = setInterval(() => {
+                    updateDisplay();
+                }, 100);
+
+            } else {
+                // 停止計時
+                stopTimer();
+            }
+        });
+
+        // 停止計時函數
+        function stopTimer() {
+            isRunning = false;
+            startStopBtn.textContent = 'Start';
+            startStopBtn.classList.remove('bg-red-500', 'hover:bg-red-600', 'pulse-animation');
+            startStopBtn.classList.add('bg-emerald-500', 'hover:bg-emerald-600');
+            
+            if (intervalId) clearInterval(intervalId);
+            if (updateIntervalId) clearInterval(updateIntervalId);
+        }
+
+        // 重置按鈕
+        resetBtn.addEventListener('click', () => {
+            stopTimer();
+            totalSeconds = 0;
+            updateDisplay();
+        });
+
+        // 當輸入框改變時，即時更新顯示（如果正在計時中）
+        participantsInput.addEventListener('input', () => {
+            if (isRunning) updateDisplay();
+        });
+
+        hourlyRateInput.addEventListener('input', () => {
+            if (isRunning) updateDisplay();
+        });
+
+        // 初始化顯示
+        updateDisplay();
+    </script>
+
+</body>
+</html>
